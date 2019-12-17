@@ -5,6 +5,9 @@
 
     <data>
         <variable
+            name="viewmodel"
+            type="com.example.alarmlocation.viewmodels.HomeViewModel" />
+        <variable
             name="alarm"
             type="com.example.alarmlocation.models.Alarm" />
     </data>
@@ -12,20 +15,28 @@
     <androidx.constraintlayout.widget.ConstraintLayout
         android:orientation="vertical"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="40sp">
+
+        <CheckBox
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/radio_button"
+            android:visibility="@{viewmodel.isListEdit}"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
 
         <TextView
             android:id="@+id/alarm_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@{alarm.key}"
-            android:layout_marginStart="10sp"
+            android:text="@{alarm.latitude}"
+            android:layout_marginStart="4sp"
             app:layout_constraintBaseline_toBaselineOf="@+id/switch1"
             app:layout_constraintHorizontal_bias="0.0"
             app:layout_constraintHorizontal_chainStyle="packed"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/switch1"
-            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintStart_toEndOf="@id/radio_button"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constrainedWidth="true" />
 

@@ -48,6 +48,18 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        if(intent?.action == "com.example.alarmlocation.CANCEL_ALARM") {
+            val key = intent.getStringExtra("key") ?: ""
+            val serviceIntent = Intent(application, AlarmService::class.java).let {
+                it.putExtra("should_stop", true)
+                it.putExtra("key", key)
+                it.action = AlarmService.action_launch_alarm
+                it
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(serviceIntent)
+            } else startService(serviceIntent)
+        }
         NavigationUI.setupWithNavController(toolbar, Navigation.findNavController(this, R.id.nav_host_fragment))
         (ContextCompat.getSystemService(
             this,
@@ -55,14 +67,16 @@ class MainActivity : AppCompatActivity() {
         ) as NotificationManager).buildAndCreateChannel(this)
         // Here, thisActivity is the current activity
         if (ContextCompat.checkSelfPermission(this,
-                Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-
-                // No explanation needed, we can request the permission.
-                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(this,
+                Manifest.permission.INTERNET) != PackageManager.PERMISSION_GRANTED
+        ) {
+                ActivityCompat.requestPermissions(this, arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.INTERNET),
                     1676)
 
         } else {
-            // Permission has already been granted
+
         }
     }
 

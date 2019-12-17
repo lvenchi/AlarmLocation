@@ -27,7 +27,7 @@ class AlarmReceiver: BroadcastReceiver() {
         val geofenceTransition = geofencingEvent.geofenceTransition
 
         // Test that the reported transition was of interest.
-        if (geofenceTransition == Geofence.GEOFENCE_TRANSITION_ENTER  ) {
+        if (geofenceTransition == Geofence.GEOFENCE_TRANSITION_ENTER || geofenceTransition == Geofence.GEOFENCE_TRANSITION_DWELL  ) {
 
             val key = intent?.getStringExtra("key")
 

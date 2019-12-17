@@ -13,10 +13,22 @@
         <action
             android:id="@+id/action_home2_to_editAlarm"
             app:destination="@id/editAlarm" />
+        <action
+            android:id="@+id/action_home2_to_editExistingAlarm"
+            app:destination="@id/editExistingAlarm" />
     </fragment>
     <fragment
         android:id="@+id/editAlarm"
         android:name="com.example.alarmlocation.EditAlarm"
         android:label="fragment_edit_alarm"
         tools:layout="@layout/fragment_edit_alarm" />
+    <fragment
+        android:id="@+id/editExistingAlarm"
+        android:name="com.example.alarmlocation.EditExistingAlarm"
+        android:label="fragment_edit_existing_alarm"
+        tools:layout="@layout/fragment_edit_existing_alarm" >
+        <argument
+            android:name="alarmkey"
+            app:argType="string" />
+    </fragment>
 </navigation>

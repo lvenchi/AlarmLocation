@@ -3,6 +3,8 @@ package com.example.alarmlocation
 import android.app.Application
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.paging.PagedList
+import androidx.paging.toLiveData
 import androidx.room.Room
 import com.example.alarmlocation.models.Alarm
 import com.example.alarmlocation.models.database.AlarmDAO
@@ -18,7 +20,6 @@ class AlarmRepository (val application: Application){
 
     private var alarmDataBase: AlarmDatabase? = null
     private var alarmDao: AlarmDAO? = null
-    private var alarmList: LiveData<List<Alarm>> = MutableLiveData()
     private var geofencingClient: GeofencingClient
 
     init {
@@ -29,8 +30,8 @@ class AlarmRepository (val application: Application){
         geofencingClient = LocationServices.getGeofencingClient(application)
     }
 
-    fun getAlarms() : LiveData<List<Alarm>>{
-        return alarmDao!!.getAlarms()
+    fun getAlarms() : LiveData<PagedList<Alarm>>{
+        return alarmDao!!.getAlarms().toLiveData(30)
     }
 
     fun insertAlarm( alarm: Alarm, viewModelScope: CoroutineScope){

@@ -40,24 +40,24 @@ fun NotificationManager.sendNotification(context: Context, title: String, body: 
 
 fun NotificationManager.createNotification(context: Context, title: String, body: String, key: String): Notification {
 
-    val pendingIntent: PendingIntent = Intent(context, AlarmService::class.java).let {
-        it.putExtra("should_stop", true)
-        it.action = AlarmService.action_launch_alarm
-        it.putExtra("key", key)
+    val pendingIntent: PendingIntent = Intent(context, AlarmService::class.java).let {aint ->
+        aint.putExtra("should_stop", true)
+        aint.action = AlarmService.action_launch_alarm
+        aint.putExtra("key", key)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            PendingIntent.getForegroundService(context, 100, it, 0)
+            PendingIntent.getForegroundService(context, 100, aint, PendingIntent.FLAG_UPDATE_CURRENT)
         } else {
-            PendingIntent.getService(context, 100, it, 0)
+            PendingIntent.getService(context, 100, aint, PendingIntent.FLAG_UPDATE_CURRENT)
         }
     }
 
-    val pendingIntent1: PendingIntent = Intent(context, MainActivity::class.java).let {
-        it.putExtra("val", title)
-        it.putExtra("key", key)
-        it.action = "com.example.alarmlocation.CANCEL_ALARM"
-        it.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-        it.addCategory(Intent.CATEGORY_LAUNCHER)
-        PendingIntent.getActivity(context, 32, it, PendingIntent.FLAG_UPDATE_CURRENT)
+    val pendingIntent1: PendingIntent = Intent(context, MainActivity::class.java).let { int ->
+        int.putExtra("val", title)
+        int.putExtra("key", key)
+        int.action = "com.example.alarmlocation.CANCEL_ALARM"
+        int.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+        int.addCategory(Intent.CATEGORY_LAUNCHER)
+        PendingIntent.getActivity(context, 32, int, PendingIntent.FLAG_UPDATE_CURRENT)
     }
 
     val notificationBuilder = NotificationCompat

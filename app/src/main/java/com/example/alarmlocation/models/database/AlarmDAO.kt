@@ -2,8 +2,10 @@ package com.example.alarmlocation.models.database
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.paging.PagedList
 import androidx.room.*
 import com.example.alarmlocation.models.Alarm
+import javax.sql.DataSource
 
 @Dao
 interface AlarmDAO {
@@ -21,7 +23,7 @@ interface AlarmDAO {
     fun deleteAlarmByKey( inKey: String)
 
     @Query("SELECT * FROM Alarm ORDER BY timestamp")
-    fun getAlarms(): LiveData<List<Alarm>>
+    fun getAlarms(): androidx.paging.DataSource.Factory<Int, Alarm> // LiveData<PagedList<Alarm>>
 
     @Update
     fun updateAlarm( alarm: Alarm )

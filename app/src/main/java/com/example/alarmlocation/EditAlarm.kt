@@ -33,21 +33,12 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.android.synthetic.main.fragment_edit_alarm.view.*
 import java.util.*
 
-// TODO: Rename parameter arguments, choose names that match
-// the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-private const val ARG_PARAM1 = "param1"
-private const val ARG_PARAM2 = "param2"
-
-// TODO: add circle for the area
 
 class EditAlarm : Fragment() {
-    // TODO: Rename and change types of parameters
-    private var param1: String? = null
-    private var param2: String? = null
+
     private var googleMap: GoogleMap? = null
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private var mapViewModel: MapViewModel? = null
-    private var isWindowShown: Boolean = false
     private var locationManager: LocationManager? = null
     lateinit var geofencingClient: GeofencingClient
     private var circle: Circle? = null
@@ -56,10 +47,6 @@ class EditAlarm : Fragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        arguments?.let {
-            param1 = it.getString(ARG_PARAM1)
-            param2 = it.getString(ARG_PARAM2)
-        }
         alarmRepository = AlarmRepository(activity!!.application)
         locationManager = activity?.getSystemService(Context.LOCATION_SERVICE) as LocationManager
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(activity!!)
@@ -148,7 +135,7 @@ class EditAlarm : Fragment() {
                     .addOnSuccessListener { location : Location? ->
                         if( location != null ) {
                             val myLoc = LatLng(location.latitude, location.longitude)
-                            googleMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(myLoc, 12F))
+                            googleMap?.moveCamera(CameraUpdateFactory.newLatLngZoom(myLoc, 14F))
                         }
                     }
             }
@@ -159,10 +146,10 @@ class EditAlarm : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val bar = activity?.findViewById<SeekBar>(R.id.seekBar)
         bar?.let {
-            it.progress = mapViewModel?.circleRadius?.value?.toInt()?.div(50) ?: 0
+            it.progress = mapViewModel?.circleRadius?.value?.toInt()?.div(30) ?: 0
             it.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(p0: SeekBar?, p1: Int, p2: Boolean) {
-                    mapViewModel?.circleRadius?.postValue(p1.toFloat()*50 + 1)
+                    mapViewModel?.circleRadius?.postValue(p1.toFloat()*30 + 1)
                 }
 
                 override fun onStartTrackingTouch(p0: SeekBar?) {
@@ -176,13 +163,12 @@ class EditAlarm : Fragment() {
         }
         activity?.findViewById<FloatingActionButton>( R.id.confirm_button)?.setOnClickListener {
             if (currMarker != null && mapViewModel != null) {
-
                 alarmRepository?.insertAlarm(
                     Alarm(currMarker!!.position.toString(),
                         currMarker!!.position.latitude.toString() ,
                         currMarker!!.position.longitude.toString(),
                         mapViewModel!!.circleRadius.value.toString(),
-                        "", true, Calendar.getInstance().timeInMillis),
+                        "", false, Calendar.getInstance().timeInMillis),
                     mapViewModel!!.viewModelScope
                 )
                 activity?.onBackPressed()

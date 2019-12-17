@@ -10,7 +10,7 @@ import com.google.android.gms.location.GeofencingClient
 import com.google.android.gms.location.GeofencingRequest
 
 fun GeofencingClient.addGeofencesOfAlarm(application: Application, alarm: Alarm){
-    val intent = Intent(application, AlarmReceiver::class.java).putExtra("key", alarm.key)
+
     addGeofences(
         GeofencingRequest.Builder().addGeofence(
             Geofence.Builder()
@@ -20,15 +20,17 @@ fun GeofencingClient.addGeofencesOfAlarm(application: Application, alarm: Alarm)
                     alarm.range.toFloat())
                 .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER or Geofence.GEOFENCE_TRANSITION_DWELL)
                 .setRequestId(alarm.key)
-                .setNotificationResponsiveness(60000)
+                .setNotificationResponsiveness(1000)
                 .setExpirationDuration(Geofence.NEVER_EXPIRE)
-                .setLoiteringDelay(60000)
-                .build()).build(),
+                .setLoiteringDelay(1000)
+                .build())
+            .setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER or GeofencingRequest.INITIAL_TRIGGER_DWELL )
+            .build(),
         PendingIntent.getBroadcast(
             application,
             1234,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT
+            Intent(application, AlarmReceiver::class.java).putExtra("key", alarm.key),
+            PendingIntent.FLAG_CANCEL_CURRENT or PendingIntent.FLAG_ONE_SHOT
         )
     )
 }

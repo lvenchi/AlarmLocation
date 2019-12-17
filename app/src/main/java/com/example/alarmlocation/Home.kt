@@ -1,19 +1,21 @@
 package com.example.alarmlocation
 
 
+import android.app.ActionBar
 import android.content.Context
 import android.os.Bundle
-import androidx.fragment.app.Fragment
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.TextView
+import android.view.*
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.view.ActionMode
+import androidx.fragment.app.Fragment
 import androidx.databinding.DataBindingUtil
+import androidx.fragment.app.ListFragment
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import androidx.navigation.Navigation
+import androidx.paging.PagedList
+import androidx.paging.PagedListAdapter
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -29,10 +31,42 @@ class Home : Fragment(), AlarmViewHolder.ItemClickListener{
 
     var homeViewModel: HomeViewModel? = null
     var adapter: AlarmAdapter? = null
+    var recyclerView: RecyclerView? = null
+    var selectedItems = ArrayList<Alarm>()
+    var actionMode : ActionMode? = null
+
+    val callback = object : ActionMode.Callback{
+        override fun onActionItemClicked(mode: ActionMode?, item: MenuItem?): Boolean {
+            return when (item?.itemId) {
+                R.id.delete_context -> {
+                    deleteAlarms()
+                    mode?.finish() // Action picked, so close the CAB
+                    true
+                }
+                else -> false
+            }
+        }
+
+        override fun onCreateActionMode(mode: ActionMode?, menu: Menu?): Boolean {
+            val inflater: MenuInflater? = mode?.menuInflater
+            inflater?.inflate(R.menu.context_menu, menu)
+            actionMode = mode
+            return true
+        }
+
+        override fun onPrepareActionMode(mode: ActionMode?, menu: Menu?): Boolean {
+            return false
+        }
+
+        override fun onDestroyActionMode(mode: ActionMode?) {
+            (recyclerView?.adapter as AlarmAdapter).disableEditMode()
+            actionMode = null
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         homeViewModel = ViewModelProviders.of(this).get(HomeViewModel::class.java)
-        adapter = AlarmAdapter(activity!!, this)
+        adapter = AlarmAdapter(this, this, homeViewModel!!)
         super.onCreate(savedInstanceState)
     }
 
@@ -50,17 +84,18 @@ class Home : Fragment(), AlarmViewHolder.ItemClickListener{
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         view.findViewById<FloatingActionButton>(R.id.fab).setOnClickListener {
+            actionMode?.finish()
             val dir = HomeDirections.actionHome2ToEditAlarm()
             Navigation.findNavController(activity!!, R.id.nav_host_fragment).navigate(dir)
         }
-        val rview = view.findViewById<RecyclerView>(R.id.alarm_list).also {
+        recyclerView = view.findViewById<RecyclerView>(R.id.alarm_list).also {
             it?.layoutManager = LinearLayoutManager(context)
             it?.setHasFixedSize(false)
             it?.adapter = adapter
         }
 
-        homeViewModel?.getAlarms()?.observe(this, Observer<List<Alarm>> {
-            (rview.adapter as AlarmAdapter).setData(it)
+        homeViewModel?.getAlarms()?.observe(this, Observer<PagedList<Alarm>> {
+            (recyclerView?.adapter as AlarmAdapter).submitList(it)
         })
 
         super.onViewCreated(view, savedInstanceState)
@@ -68,14 +103,50 @@ class Home : Fragment(), AlarmViewHolder.ItemClickListener{
 
     override fun onItemClicked(alarm: Alarm) {
         homeViewModel?.updateAlarm(alarm)
-
     }
 
-    class AlarmAdapter(context: Context, private val itemClickListener: AlarmViewHolder.ItemClickListener)
-        : RecyclerView.Adapter<AlarmViewHolder>() {
+    override fun onItemLongClicked(alarm: Alarm){
+        (activity as AppCompatActivity?)?.startSupportActionMode(callback)
+        (recyclerView?.adapter as AlarmAdapter).enableEditMode()
+    }
 
-        private var alarmlist: List<Alarm>? = null
-        private val layoutInflater = LayoutInflater.from(context)
+    override fun onCheckBoxClick(alarm: Alarm) {
+        if(selectedItems.contains(alarm)){
+            selectedItems.remove(alarm)
+        } else selectedItems.add(alarm)
+    }
+
+    override fun viewAlarmDetails(alarm: Alarm) {
+        val dir = HomeDirections.actionHome2ToEditExistingAlarm(alarm.key)
+        Navigation.findNavController(activity!!, R.id.nav_host_fragment).navigate(dir)
+    }
+
+    fun deleteAlarms(){
+        for ( alarm in selectedItems ) {
+            homeViewModel?.removeAlarms(alarm)
+        }
+        selectedItems.clear()
+    }
+
+    companion object {
+        private val DIFF_CALLBACK = object : DiffUtil.ItemCallback<Alarm>() {
+            override fun areItemsTheSame(oldItem: Alarm, newItem: Alarm): Boolean {
+                return oldItem.key == newItem.key
+            }
+
+            override fun areContentsTheSame(oldItem: Alarm, newItem: Alarm): Boolean {
+                return oldItem.key == newItem.key && oldItem.isActive == newItem.isActive
+            }
+        }
+    }
+
+    class AlarmAdapter(
+        private val parentFragment: Fragment,
+        private val itemClickListener: AlarmViewHolder.ItemClickListener,
+        private val viewModel: HomeViewModel )
+        : PagedListAdapter<Alarm, AlarmViewHolder>(DIFF_CALLBACK) {
+
+        private val layoutInflater = LayoutInflater.from(parentFragment.activity!!)
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): AlarmViewHolder {
 
@@ -83,31 +154,27 @@ class Home : Fragment(), AlarmViewHolder.ItemClickListener{
                 layoutInflater, R.layout.alarm_layout,
                 parent,
                 false)
-
+            alarmLayoutBinding.viewmodel= viewModel
+            alarmLayoutBinding.lifecycleOwner = parentFragment
             return AlarmViewHolder(
-                alarmLayoutBinding
+                alarmLayoutBinding, parentFragment
             )
         }
 
-        override fun getItemCount(): Int {
-            return alarmlist?.size ?: 0
-        }
-
         override fun onBindViewHolder(holder: AlarmViewHolder, position: Int) {
-            //holder.itemView.findViewById<TextView>(R.id.alarm_title).text =
-                //alarmlist!![position].key
-            val al = alarmlist!![position]
-            holder.alarmBinding.alarm = al
-            holder.bind(al, itemClickListener )
-
+            val al = getItem(position)
+            if(al!= null) {
+                holder.alarmBinding.alarm = al
+                holder.bind(al, itemClickListener)
+            }
         }
 
-        fun setData(newData: List<Alarm>) {
-
-            alarmlist = newData
-            notifyDataSetChanged()
+        fun enableEditMode(){
+            viewModel.isListEdit.postValue(View.VISIBLE)
         }
 
+        fun disableEditMode(){
+            viewModel.isListEdit.postValue(View.GONE)
+        }
     }
-
 }
