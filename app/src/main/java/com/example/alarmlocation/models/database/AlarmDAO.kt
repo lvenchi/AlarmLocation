@@ -31,5 +31,7 @@ interface AlarmDAO {
     @Query("UPDATE Alarm SET active = :status WHERE `key` LIKE :key")
     fun updateAlarmStatus( key: String, status: Boolean)
 
+    @Query("UPDATE Alarm SET geocodedaddress = :address WHERE `key` LIKE :key")
+    fun updateAlarmAddressByKey( key: String, address: String?)
 
 }

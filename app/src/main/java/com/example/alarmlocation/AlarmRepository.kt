@@ -1,26 +1,36 @@
 package com.example.alarmlocation
 
 import android.app.Application
+import android.location.Address
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.paging.PagedList
 import androidx.paging.toLiveData
 import androidx.room.Room
+import androidx.work.Data
+import androidx.work.OneTimeWorkRequest
+import androidx.work.WorkManager
+import androidx.work.WorkerParameters
 import com.example.alarmlocation.models.Alarm
 import com.example.alarmlocation.models.database.AlarmDAO
 import com.example.alarmlocation.models.database.AlarmDatabase
 import com.example.alarmlocation.utils.addGeofencesOfAlarm
+import com.example.alarmlocation.workers.GeocodingWorker
+import com.example.alarmlocation.workers.UpdateAlarmWorker
 import com.google.android.gms.location.GeofencingClient
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.util.*
 
 class AlarmRepository (val application: Application){
 
     private var alarmDataBase: AlarmDatabase? = null
     private var alarmDao: AlarmDAO? = null
     private var geofencingClient: GeofencingClient
+    private var workManager: WorkManager = WorkManager.getInstance(application)
 
     init {
         alarmDataBase = alarmDataBase?: Room.databaseBuilder(application, AlarmDatabase::class.java, "AlarmDatabase")
@@ -32,6 +42,21 @@ class AlarmRepository (val application: Application){
 
     fun getAlarms() : LiveData<PagedList<Alarm>>{
         return alarmDao!!.getAlarms().toLiveData(30)
+    }
+
+    fun translateCoordinates( latLng: LatLng, key: String) : Address?{
+
+        val req = OneTimeWorkRequest.Builder(GeocodingWorker::class.java)
+        val req1 = OneTimeWorkRequest.Builder(UpdateAlarmWorker::class.java)
+        req1.setInputData(Data.Builder().putString("key", key).build())
+        req.setInputData(
+            Data.Builder().
+                putDouble("lat", latLng.latitude).
+                putDouble("long", latLng.longitude).
+                build())
+        workManager.beginWith(req.build()).then(req1.build()).enqueue()
+
+        return null
     }
 
     fun insertAlarm( alarm: Alarm, viewModelScope: CoroutineScope){
@@ -56,6 +81,18 @@ class AlarmRepository (val application: Application){
                 geofencingClient.addGeofencesOfAlarm(application, alarm)
             }
         }
+    }
+
+    fun updateAlarmAddressByKey( key: String, address: String?, viewModelScope: CoroutineScope){
+        viewModelScope.launch(Dispatchers.IO) {
+            alarmDao?.updateAlarmAddressByKey(key, address)
+        }
+    }
+
+    fun updateAlarmAddressByKey( key: String, address: String?){
+        //viewModelScope.launch(Dispatchers.IO) {
+            alarmDao?.updateAlarmAddressByKey(key, address)
+        //}
     }
 
     fun deleteAlarm( alarm: Alarm, viewModelScope: CoroutineScope ){

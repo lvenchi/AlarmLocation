@@ -2,6 +2,8 @@ package com.example.alarmlocation
 
 
 import android.content.Context
+import android.location.Address
+import android.location.Geocoder
 import android.location.Location
 import android.location.LocationManager
 import android.os.Bundle
@@ -14,6 +16,8 @@ import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.Navigation
+import androidx.navigation.findNavController
 import com.example.alarmlocation.databinding.FragmentEditAlarmBinding
 import com.example.alarmlocation.databinding.FragmentEditExistingAlarmBinding
 import com.example.alarmlocation.models.Alarm
@@ -27,19 +31,17 @@ import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.util.*
 
-/**
- * A simple [Fragment] subclass.
- */
+
 class EditExistingAlarm : Fragment() {
 
 
     private var googleMap: GoogleMap? = null
     private var mapViewModel: MapViewModel? = null
     private var locationManager: LocationManager? = null
-    lateinit var geofencingClient: GeofencingClient
     private var circle: Circle? = null
     private var currMarker: Marker? = null
     private var alarmRepository: AlarmRepository? = null
@@ -51,7 +53,6 @@ class EditExistingAlarm : Fragment() {
         alarmKey = arguments?.getString("alarmkey")
         alarmRepository = MainActivity.getRepository(activity!!.application)
         locationManager = activity?.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        geofencingClient = LocationServices.getGeofencingClient(activity!!)
         super.onCreate(savedInstanceState)
     }
 
@@ -72,6 +73,9 @@ class EditExistingAlarm : Fragment() {
         mapViewModel?.viewModelScope?.launch(Dispatchers.IO) {
             alarm = alarmRepository?.getAlarmByKey(alarmKey ?: "")
             mapViewModel?.viewModelScope?.launch(Dispatchers.Main){handleResult()}
+            editAlarmBinding.root.findViewById<SeekBar>(R.id.seekBar)
+                .progress = alarm?.range?.toFloat()?.toInt()?.div(30) ?: 0
+
         }
         return editAlarmBinding.root
     }
@@ -79,34 +83,37 @@ class EditExistingAlarm : Fragment() {
 
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        val bar = activity?.findViewById<SeekBar>(R.id.seekBar)
-        bar?.let {
-            it.progress = mapViewModel?.circleRadius?.value?.toInt()?.div(30) ?: 0
-            it.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(p0: SeekBar?, p1: Int, p2: Boolean) {
-                    mapViewModel?.circleRadius?.postValue(p1.toFloat()*30 + 1)
-                }
 
-                override fun onStartTrackingTouch(p0: SeekBar?) {
+        activity?.findViewById<SeekBar>(R.id.seekBar)?.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(p0: SeekBar?, p1: Int, p2: Boolean) {
+                mapViewModel?.circleRadius?.postValue(p1.toFloat()*30 + 1)
+            }
 
-                }
+            override fun onStartTrackingTouch(p0: SeekBar?) {
 
-                override fun onStopTrackingTouch(p0: SeekBar?) {
+            }
 
-                }
-            })
-        }
+            override fun onStopTrackingTouch(p0: SeekBar?) {
+
+            }
+        })
         activity?.findViewById<FloatingActionButton>( R.id.confirm_button)?.setOnClickListener {
             if (currMarker != null && mapViewModel != null) {
+
+                val newAlarm = Alarm(currMarker!!.position.toString(),
+                    currMarker!!.position.latitude.toString() ,
+                    currMarker!!.position.longitude.toString(),
+                    mapViewModel!!.circleRadius.value.toString(),
+                    "", false,null, alarm!!.timestamp)
+
+
                 alarmRepository?.updateAlarm(
-                    Alarm(currMarker!!.position.toString(),
-                        currMarker!!.position.latitude.toString() ,
-                        currMarker!!.position.longitude.toString(),
-                        mapViewModel!!.circleRadius.value.toString(),
-                        "", false, alarm!!.timestamp),
-                    mapViewModel!!.viewModelScope
-                )
-                activity?.onBackPressed()
+                    newAlarm,
+                    mapViewModel!!.viewModelScope)
+
+                alarmRepository?.translateCoordinates(currMarker!!.position, newAlarm.key)
+                Navigation.findNavController(activity!!, R.id.nav_host_fragment).popBackStack()
+                //activity?.onBackPressed()
             }
         }
         super.onViewCreated(view, savedInstanceState)
@@ -148,6 +155,7 @@ class EditExistingAlarm : Fragment() {
                                     .radius(mapViewModel?.circleRadius?.value!!.toDouble())
                                     .clickable(false)
                                     .strokeColor(R.color.colorPrimaryDark)
+                                    .fillColor(R.color.colorAccent)
                             )
 
                             this?.setOnMarkerClickListener {tappedMarker ->
@@ -162,11 +170,7 @@ class EditExistingAlarm : Fragment() {
                                 true
                             }
                             this?.setOnMapLongClickListener { res ->
-                                currMarker?.let { marker ->
-                                    circle?.remove()
-                                    circle = null
-                                    marker.remove()
-                                }
+                                currMarker?.remove()
                                 isShown = false
                                 currMarker = googleMap?.addMarker(
                                     MarkerOptions().position(res).draggable(true).title("Your Alarm").snippet(
@@ -178,7 +182,7 @@ class EditExistingAlarm : Fragment() {
                                     ).alpha(0.8F)
                                 )
 
-                                circle = googleMap?.addCircle(
+                                if(circle != null) circle?.center = currMarker?.position else circle = googleMap?.addCircle(
                                     CircleOptions().center(currMarker!!.position)
                                         .radius(mapViewModel?.circleRadius?.value!!.toDouble())
                                         .clickable(false)

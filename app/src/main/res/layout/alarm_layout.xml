@@ -24,13 +24,15 @@
             android:visibility="@{viewmodel.isListEdit}"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintStart_toStartOf="parent" />
-
+        <!-- -->
         <TextView
             android:id="@+id/alarm_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@{alarm.latitude}"
+            android:text='@{alarm.geocodedAddress != null ? alarm.geocodedAddress : "loading..."}'
             android:layout_marginStart="4sp"
+            android:maxLines="1"
+            android:ellipsize="end"
             app:layout_constraintBaseline_toBaselineOf="@+id/switch1"
             app:layout_constraintHorizontal_bias="0.0"
             app:layout_constraintHorizontal_chainStyle="packed"

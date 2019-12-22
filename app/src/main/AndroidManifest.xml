@@ -34,6 +34,11 @@
             </intent-filter>
         </service>
 
+        <service android:name=".GeocodingService" android:exported="false">
+            <intent-filter>
+                <action android:name="com.example.alarmlocation.GEOCODE"></action>
+            </intent-filter>
+        </service>
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyCho7JtkDLXnfV24o7uFg1VXFVPNzOo1bg"/>

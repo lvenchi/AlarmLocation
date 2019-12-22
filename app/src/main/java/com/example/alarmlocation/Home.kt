@@ -32,10 +32,11 @@ class Home : Fragment(), AlarmViewHolder.ItemClickListener{
     var homeViewModel: HomeViewModel? = null
     var adapter: AlarmAdapter? = null
     var recyclerView: RecyclerView? = null
+    //could save only indexes
     var selectedItems = ArrayList<Alarm>()
     var actionMode : ActionMode? = null
 
-    val callback = object : ActionMode.Callback{
+    private val callback = object : ActionMode.Callback{
         override fun onActionItemClicked(mode: ActionMode?, item: MenuItem?): Boolean {
             return when (item?.itemId) {
                 R.id.delete_context -> {
@@ -60,6 +61,7 @@ class Home : Fragment(), AlarmViewHolder.ItemClickListener{
 
         override fun onDestroyActionMode(mode: ActionMode?) {
             (recyclerView?.adapter as AlarmAdapter).disableEditMode()
+            selectedItems.clear()
             actionMode = null
         }
     }
@@ -74,7 +76,6 @@ class Home : Fragment(), AlarmViewHolder.ItemClickListener{
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-
         val homeFragmentBinding: FragmentHomeBinding =
             DataBindingUtil.inflate(inflater, R.layout.fragment_home, container, false)
         homeFragmentBinding.viewmodel = homeViewModel
@@ -135,7 +136,9 @@ class Home : Fragment(), AlarmViewHolder.ItemClickListener{
             }
 
             override fun areContentsTheSame(oldItem: Alarm, newItem: Alarm): Boolean {
-                return oldItem.key == newItem.key && oldItem.isActive == newItem.isActive
+                return oldItem.key == newItem.key &&
+                        oldItem.isActive == newItem.isActive &&
+                        oldItem.geocodedAddress == newItem.geocodedAddress
             }
         }
     }

@@ -17,7 +17,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:id="@+id/latLng"
-            android:text="@{viewmodel.latlLng.toString()}" />
+            />
+        <!--android:text="@{viewmodel.latlLng.toString()}" -->
         <fragment
             android:layout_below="@id/progress"
             android:layout_width="match_parent"

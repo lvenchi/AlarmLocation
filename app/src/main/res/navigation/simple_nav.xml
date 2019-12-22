@@ -12,10 +12,13 @@
         tools:layout="@layout/fragment_home" >
         <action
             android:id="@+id/action_home2_to_editAlarm"
-            app:destination="@id/editAlarm" />
+            app:destination="@id/editAlarm"
+            app:enterAnim="@animator/map_page_animations_in" />
         <action
             android:id="@+id/action_home2_to_editExistingAlarm"
-            app:destination="@id/editExistingAlarm" />
+            app:destination="@id/editExistingAlarm"
+            app:enterAnim="@animator/map_page_animations_in"
+            app:exitAnim="@animator/map_page_animations_out" />
     </fragment>
     <fragment
         android:id="@+id/editAlarm"
@@ -26,7 +29,7 @@
         android:id="@+id/editExistingAlarm"
         android:name="com.example.alarmlocation.EditExistingAlarm"
         android:label="fragment_edit_existing_alarm"
-        tools:layout="@layout/fragment_edit_existing_alarm" >
+        tools:layout="@layout/fragment_edit_existing_alarm">
         <argument
             android:name="alarmkey"
             app:argType="string" />

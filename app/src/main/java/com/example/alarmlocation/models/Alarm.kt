@@ -1,5 +1,6 @@
 package com.example.alarmlocation.models
 
+import android.location.Address
 import android.view.View
 import androidx.annotation.NonNull
 import androidx.room.*
@@ -13,6 +14,7 @@ data class Alarm (
     @ColumnInfo(name = "range") val range: String,
     @ColumnInfo(name = "elapse") val elapse: String,
     @ColumnInfo(name = "active") var isActive: Boolean,
+    @ColumnInfo(name = "geocodedaddress") var geocodedAddress: String?,
 
     @PrimaryKey
     @NonNull

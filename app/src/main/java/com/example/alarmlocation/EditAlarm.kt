@@ -4,9 +4,11 @@ import android.app.Notification
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.location.Geocoder
 import android.location.Location
 import android.location.LocationManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
@@ -31,6 +33,8 @@ import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.android.synthetic.main.fragment_edit_alarm.view.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.util.*
 
 
@@ -40,7 +44,6 @@ class EditAlarm : Fragment() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private var mapViewModel: MapViewModel? = null
     private var locationManager: LocationManager? = null
-    lateinit var geofencingClient: GeofencingClient
     private var circle: Circle? = null
     private var currMarker: Marker? = null
     private var alarmRepository: AlarmRepository? = null
@@ -50,10 +53,7 @@ class EditAlarm : Fragment() {
         alarmRepository = AlarmRepository(activity!!.application)
         locationManager = activity?.getSystemService(Context.LOCATION_SERVICE) as LocationManager
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(activity!!)
-        geofencingClient = LocationServices.getGeofencingClient(activity!!)
     }
-
-
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -63,17 +63,61 @@ class EditAlarm : Fragment() {
             ViewModelProviders.of(this).get( MapViewModel::class.java )
         }
 
+        val editAlarmBinding: FragmentEditAlarmBinding =
+            DataBindingUtil.inflate( inflater, R.layout.fragment_edit_alarm, container, false)
+        editAlarmBinding.lifecycleOwner = this
+        editAlarmBinding.viewmodel = mapViewModel
+        loadMap()
+
         mapViewModel?.circleRadius?.observe(this, Observer { value ->
             googleMap?.let {
                 circle?.radius = value.toDouble()
             }
         })
+        return editAlarmBinding.root
+    }
 
-        val editAlarmBinding: FragmentEditAlarmBinding =
-            DataBindingUtil.inflate( inflater, R.layout.fragment_edit_alarm, container, false)
-        editAlarmBinding.lifecycleOwner = this
-        editAlarmBinding.viewmodel = mapViewModel
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        val bar = activity?.findViewById<SeekBar>(R.id.seekBar)
+        bar?.let {
+            it.progress = mapViewModel?.circleRadius?.value?.toInt()?.div(30) ?: 0
+            it.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(p0: SeekBar?, p1: Int, p2: Boolean) {
+                    mapViewModel?.circleRadius?.postValue(p1.toFloat()*30 + 1)
+                }
 
+                override fun onStartTrackingTouch(p0: SeekBar?) {
+
+                }
+
+                override fun onStopTrackingTouch(p0: SeekBar?) {
+
+                }
+            })
+        }
+        activity?.findViewById<FloatingActionButton>( R.id.confirm_button)?.setOnClickListener {
+            if (currMarker != null && mapViewModel != null) {
+                val newAlarm = Alarm(currMarker!!.position.toString(),
+                    currMarker!!.position.latitude.toString() ,
+                    currMarker!!.position.longitude.toString(),
+                    mapViewModel!!.circleRadius.value.toString(),
+                    "", false, null, Calendar.getInstance().timeInMillis)
+
+
+                mapViewModel!!.viewModelScope.launch(Dispatchers.IO) {
+                    alarmRepository?.insertAlarm(
+                        newAlarm,
+                        mapViewModel!!.viewModelScope
+                    )
+                }
+                alarmRepository?.translateCoordinates(currMarker!!.position, newAlarm.key)
+                Navigation.findNavController(activity!!, R.id.nav_host_fragment).popBackStack()
+            }
+        }
+        super.onViewCreated(view, savedInstanceState)
+    }
+
+    fun loadMap(){
         var isShown = false
         (childFragmentManager.findFragmentById(R.id.map_fragment) as SupportMapFragment? ).also {
             it?.getMapAsync { resMap ->
@@ -113,6 +157,7 @@ class EditAlarm : Fragment() {
                                 .radius(mapViewModel?.circleRadius?.value!!.toDouble())
                                 .clickable(false)
                                 .strokeColor(R.color.colorPrimaryDark)
+                                .fillColor(R.color.colorAccent)
                         )
 
                         googleMap?.setOnMarkerDragListener( object : GoogleMap.OnMarkerDragListener{
@@ -140,40 +185,5 @@ class EditAlarm : Fragment() {
                     }
             }
         }
-        return editAlarmBinding.root
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        val bar = activity?.findViewById<SeekBar>(R.id.seekBar)
-        bar?.let {
-            it.progress = mapViewModel?.circleRadius?.value?.toInt()?.div(30) ?: 0
-            it.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(p0: SeekBar?, p1: Int, p2: Boolean) {
-                    mapViewModel?.circleRadius?.postValue(p1.toFloat()*30 + 1)
-                }
-
-                override fun onStartTrackingTouch(p0: SeekBar?) {
-
-                }
-
-                override fun onStopTrackingTouch(p0: SeekBar?) {
-
-                }
-            })
-        }
-        activity?.findViewById<FloatingActionButton>( R.id.confirm_button)?.setOnClickListener {
-            if (currMarker != null && mapViewModel != null) {
-                alarmRepository?.insertAlarm(
-                    Alarm(currMarker!!.position.toString(),
-                        currMarker!!.position.latitude.toString() ,
-                        currMarker!!.position.longitude.toString(),
-                        mapViewModel!!.circleRadius.value.toString(),
-                        "", false, Calendar.getInstance().timeInMillis),
-                    mapViewModel!!.viewModelScope
-                )
-                activity?.onBackPressed()
-            }
-        }
-        super.onViewCreated(view, savedInstanceState)
     }
 }
