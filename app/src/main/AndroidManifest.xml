@@ -27,16 +27,13 @@
             </intent-filter>
         </activity>
 
+        <activity android:name=".RemoveAlarmActivity">
+
+        </activity>
         <service android:name=".AlarmService"
             android:exported="false">
             <intent-filter>
                 <action android:name="com.example.alarmlocation.FIRE_ALARM"></action>
-            </intent-filter>
-        </service>
-
-        <service android:name=".GeocodingService" android:exported="false">
-            <intent-filter>
-                <action android:name="com.example.alarmlocation.GEOCODE"></action>
             </intent-filter>
         </service>
         <meta-data
