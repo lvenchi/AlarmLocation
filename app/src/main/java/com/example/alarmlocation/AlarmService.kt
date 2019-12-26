@@ -71,4 +71,10 @@ class AlarmService : Service( ) {
         return null
     }
 
+    override fun onDestroy() {
+        workManager.cancelUniqueWork("VibrateWorker")
+        workManager.cancelUniqueWork("RingtoneWorker")
+        super.onDestroy()
+    }
+
 }
