@@ -3,6 +3,7 @@ package com.example.alarmlocation
 import android.Manifest
 import android.app.Application
 import android.app.NotificationManager
+import android.app.Service
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -48,6 +49,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
         if(intent?.action == "com.example.alarmlocation.CANCEL_ALARM") {
             val key = intent.getStringExtra("key") ?: ""
             val serviceIntent = Intent(application, AlarmService::class.java).let {

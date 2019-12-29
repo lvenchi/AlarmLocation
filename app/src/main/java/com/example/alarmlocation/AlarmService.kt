@@ -12,14 +12,14 @@ import com.example.alarmlocation.utils.createNotification
 import com.example.alarmlocation.workers.RingtoneWorker
 import com.example.alarmlocation.workers.VibrationWorker
 import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.coroutineScope
 
 
 class AlarmService : Service( ) {
 
     companion object {
-        val action_launch_alarm = "com.example.alarmlocation.FIRE_ALARM"
-        val id = 10
+        const val action_launch_alarm = "com.example.alarmlocation.FIRE_ALARM"
+        const val id = 10
+        var isRunning = false
     }
 
     private val workManager = WorkManager.getInstance(application)
@@ -33,16 +33,16 @@ class AlarmService : Service( ) {
 
         if(intent != null) {
             if (!intent.getBooleanExtra("should_stop", true)) {
+                isRunning = true
                 val key: String = intent.getStringExtra("key") ?: ""
-                startForeground(
-                    10,
-                    notificationManager.createNotification(
-                        baseContext,
-                        "Wake Up!",
-                        "You arrived!",
-                        key
-                    )
+                val notification = notificationManager.createNotification(
+                    baseContext,
+                    "Wake Up!",
+                    "You arrived!",
+                    key
                 )
+                startForeground(10, notification )
+                notificationManager.notify(10, notification )
 
                 workManager.beginUniqueWork(
                     "VibrateWorker",
@@ -56,12 +56,25 @@ class AlarmService : Service( ) {
                 ).enqueue()
 
             } else {
-                val key: String = intent.getStringExtra("key") ?: ""
-                workManager.cancelUniqueWork("VibrateWorker")
-                workManager.cancelUniqueWork("RingtoneWorker")
-                MainActivity.getRepository(application).updateAlarmByKey(key, GlobalScope)
-                stopForeground(true)
-                stopSelf()
+                if(isRunning) {
+                    val key: String = intent.getStringExtra("key") ?: ""
+                    workManager.cancelUniqueWork("VibrateWorker")
+                    workManager.cancelUniqueWork("RingtoneWorker")
+                    MainActivity.getRepository(application).updateAlarmByKey(key, GlobalScope)
+                    isRunning = false
+                    stopForeground(true)
+                    stopSelf()
+                } else {
+                    val notification = notificationManager.createNotification(
+                        baseContext,
+                        "Wake Up!",
+                        "You arrived!",
+                        ""
+                    )
+                    startForeground(10, notification )
+                    stopForeground(true)
+                    stopSelf()
+                }
             }
         }
         return START_STICKY
